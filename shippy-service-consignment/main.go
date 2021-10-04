@@ -18,6 +18,7 @@ const (
 
 type repository interface {
 	Create(*pb.Consignment) (*pb.Consignment, error)
+	GetAll() []*pb.Consignment
 }
 
 // Repository - Dummy repository, this simulates the use of a datastore
@@ -36,12 +37,17 @@ func (repo *Repository) Create(consignment *pb.Consignment) (*pb.Consignment, er
 	return consignment, nil
 }
 
+func (repo *Repository) GetAll() []*pb.Consignment {
+	return repo.consignments
+}
+
 // Service should implement all of the methods to satisfy the service
 // we defined in our protobuf definition. You can check the interface
 // in the generated code itself for the exact method signatures etc
 // to give you a better idea.
 type service struct {
 	repo repository
+	*pb.UnimplementedShippingServiceServer
 }
 
 // CreateConsignment - we created just one method on our service,
@@ -60,6 +66,12 @@ func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment) (*
 	return &pb.Response{Created: true, Consignment: consignment}, nil
 }
 
+// GetConsignments -
+func (s *service) GetConsignments(ctx context.Context, req *pb.GetRequest) (*pb.Response, error) {
+	consignments := s.repo.GetAll()
+	return &pb.Response{Consignments: consignments}, nil
+}
+
 func main() {
 
 	repo := &Repository{}
@@ -74,7 +86,7 @@ func main() {
 	// Register our service with the gRPC server, this will tie our
 	// implementation into the auto-generated interface code for our
 	// protobuf definition.
-	pb.RegisterShippingServiceServer(s, &service{repo})
+	pb.RegisterShippingServiceServer(s, &service{repo: repo})
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
